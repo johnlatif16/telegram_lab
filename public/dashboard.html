@@ -9,7 +9,6 @@
     input,button,textarea{padding:10px;font-size:15px}
     input,textarea{width:100%;margin:6px 0}
     button{cursor:pointer}
-    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .card{border:1px solid #ddd;border-radius:10px;padding:15px;margin:15px 0}
     table{width:100%;border-collapse:collapse;margin-top:10px}
     th,td{border-bottom:1px solid #eee;padding:10px;text-align:right}
@@ -19,17 +18,15 @@
   </style>
 </head>
 <body>
-  <div class="row" style="justify-content:space-between">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
     <h2>لوحة التحكم</h2>
     <button id="logout" class="danger">Logout</button>
   </div>
 
   <div class="card">
     <h3>إضافة رقم</h3>
-    <div class="row">
-      <input id="phone" placeholder="اكتب الرقم (مثال: 01234567890)" />
-      <button id="add">إضافة</button>
-    </div>
+    <input id="phone" placeholder="اكتب الرقم (مثال: 01234567890)" />
+    <button id="add">إضافة</button>
     <div id="addMsg"></div>
   </div>
 
@@ -40,7 +37,7 @@
     <button id="send">إرسال</button>
     <div id="sendMsg"></div>
     <small>
-      ملاحظة: لن يمكن الإرسال إلا إذا صاحب الرقم فتح البوت وبعت الرقم مرة واحدة (علشان يتسجل chat_id).
+      ملاحظة: لازم صاحب الرقم يفتح البوت ويبعت الرقم مرة واحدة عشان يتسجل chat_id.
     </small>
   </div>
 
@@ -54,7 +51,7 @@
           <th>الرقم</th>
           <th>تاريخ الإضافة</th>
           <th>حذف</th>
-          <th>نسخ للرسائل</th>
+          <th>استخدام</th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
@@ -65,8 +62,14 @@
     function normalizePhone(s){ return String(s||"").replace(/[^\d]/g,""); }
 
     async function api(url, options = {}) {
-      const resp = await fetch(url, { credentials: "include", ...options });
+      const token = localStorage.getItem("jwt");
+      const headers = { ...(options.headers || {}) };
+      if (token) headers["Authorization"] = "Bearer " + token;
+
+      const resp = await fetch(url, { ...options, headers });
+
       if (resp.status === 401) {
+        localStorage.removeItem("jwt");
         location.href = "/login";
         return null;
       }
@@ -81,7 +84,7 @@
       const resp = await api("/api/numbers");
       if (!resp) return;
 
-      const data = await resp.json();
+      const data = await resp.json().catch(()=>({}));
       const items = data.items || [];
 
       if (!items.length) {
@@ -112,26 +115,27 @@
         tdDel.appendChild(delBtn);
         tr.appendChild(tdDel);
 
-        const tdCopy = document.createElement("td");
-        const copyBtn = document.createElement("button");
-        copyBtn.textContent = "استخدام";
-        copyBtn.onclick = () => {
+        const tdUse = document.createElement("td");
+        const useBtn = document.createElement("button");
+        useBtn.textContent = "استخدام";
+        useBtn.onclick = () => {
           document.getElementById("sendPhone").value = it.phone || "";
           window.scrollTo({ top: 0, behavior: "smooth" });
         };
-        tdCopy.appendChild(copyBtn);
-        tr.appendChild(tdCopy);
+        tdUse.appendChild(useBtn);
+        tr.appendChild(tdUse);
 
         tbody.appendChild(tr);
       }
     }
 
-    document.getElementById("add").addEventListener("click", async () => {
+    document.getElementById("add").onclick = async () => {
       const phone = normalizePhone(document.getElementById("phone").value);
-      const box = document.getElementById("addMsg");
-      box.textContent = "";
+      const msg = document.getElementById("addMsg");
+      msg.textContent = "";
+      msg.className = "";
 
-      if (!phone) { box.textContent = "رقم غير صحيح"; box.className = "err"; return; }
+      if (!phone) { msg.textContent = "رقم غير صحيح"; msg.className="err"; return; }
 
       const resp = await api("/api/numbers", {
         method: "POST",
@@ -141,26 +145,28 @@
 
       if (!resp) return;
 
+      const data = await resp.json().catch(()=>({}));
+
       if (resp.ok) {
-        box.textContent = "تمت الإضافة ✅";
-        box.className = "ok";
+        msg.textContent = "تمت الإضافة ✅";
+        msg.className = "ok";
         document.getElementById("phone").value = "";
         loadNumbers();
       } else {
-        const data = await resp.json().catch(()=>({}));
-        box.textContent = data.error || "فشل الإضافة";
-        box.className = "err";
+        msg.textContent = data.error || ("HTTP " + resp.status);
+        msg.className = "err";
       }
-    });
+    };
 
-    document.getElementById("send").addEventListener("click", async () => {
+    document.getElementById("send").onclick = async () => {
       const phone = normalizePhone(document.getElementById("sendPhone").value);
       const message = document.getElementById("message").value.trim();
-      const box = document.getElementById("sendMsg");
-      box.textContent = "";
+      const msg = document.getElementById("sendMsg");
+      msg.textContent = "";
+      msg.className = "";
 
-      if (!phone) { box.textContent = "رقم غير صحيح"; box.className="err"; return; }
-      if (!message) { box.textContent = "اكتب رسالة"; box.className="err"; return; }
+      if (!phone) { msg.textContent="رقم غير صحيح"; msg.className="err"; return; }
+      if (!message) { msg.textContent="اكتب رسالة"; msg.className="err"; return; }
 
       const resp = await api("/api/send", {
         method: "POST",
@@ -170,24 +176,31 @@
 
       if (!resp) return;
 
+      const data = await resp.json().catch(()=>({}));
+
       if (resp.ok) {
-        box.textContent = "تم الإرسال ✅";
-        box.className = "ok";
+        msg.textContent = "تم الإرسال ✅";
+        msg.className = "ok";
       } else {
-        const data = await resp.json().catch(()=>({}));
-        box.textContent = data.error || "فشل الإرسال";
-        box.className = "err";
+        msg.textContent = data.error || ("HTTP " + resp.status);
+        msg.className = "err";
       }
-    });
+    };
 
-    document.getElementById("refresh").addEventListener("click", loadNumbers);
+    document.getElementById("refresh").onclick = loadNumbers;
 
-    document.getElementById("logout").addEventListener("click", async () => {
-      await fetch("/api/auth/logout", { method:"POST", credentials:"include" });
+    document.getElementById("logout").onclick = async () => {
+      await fetch("/api/auth/logout", { method: "POST" }).catch(()=>{});
+      localStorage.removeItem("jwt");
       location.href = "/login";
-    });
+    };
 
-    loadNumbers();
+    // لو مفيش توكن، ودّيه للوجين
+    if (!localStorage.getItem("jwt")) {
+      location.href = "/login";
+    } else {
+      loadNumbers();
+    }
   </script>
 </body>
 </html>
