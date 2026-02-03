@@ -12,7 +12,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.static(path.join(process.cwd(), "public")));
 
-// ✅ helper: رجّع error message واضح
+// ---------- helpers ----------
 function errOut(res, where, e) {
   console.error(`[${where}]`, e);
   return res.status(500).json({
@@ -21,29 +21,8 @@ function errOut(res, where, e) {
   });
 }
 
-// ---------- Firebase ----------
-function getDb() {
-  if (!admin.apps.length) {
-    const raw = process.env.FIREBASE_CONFIG;
-    if (!raw) throw new Error("Missing FIREBASE_CONFIG env var");
-
-    let cfg;
-    try {
-      cfg = JSON.parse(raw);
-    } catch (e) {
-      throw new Error("FIREBASE_CONFIG JSON.parse failed: " + e.message);
-    }
-
-    // ✅ إصلاح شائع: لو private_key جاية فيها \\n خليه \n
-    if (cfg.private_key && typeof cfg.private_key === "string") {
-      cfg.private_key = cfg.private_key.replace(/\\n/g, "\n");
-    }
-
-    admin.initializeApp({
-      credential: admin.credential.cert(cfg),
-    });
-  }
-  return admin.firestore();
+function normalizePhone(input) {
+  return String(input || "").replace(/[^\d]/g, "");
 }
 
 // ---------- JWT ----------
@@ -64,8 +43,8 @@ function authRequired(req, res, next) {
     const auth = req.headers.authorization || "";
     const bearerToken = auth.startsWith("Bearer ") ? auth.slice(7) : null;
     const cookieToken = req.cookies?.token;
-
     const token = bearerToken || cookieToken;
+
     if (!token) return res.status(401).json({ error: "Unauthorized" });
 
     req.user = verifyToken(token);
@@ -75,8 +54,37 @@ function authRequired(req, res, next) {
   }
 }
 
-function normalizePhone(input) {
-  return String(input || "").replace(/[^\d]/g, "");
+// ---------- Firebase (Base64 safe) ----------
+function loadFirebaseConfig() {
+  // الأفضل: Base64
+  const b64 = process.env.FIREBASE_CONFIG_B64;
+  if (b64) {
+    const json = Buffer.from(b64, "base64").toString("utf8");
+    const cfg = JSON.parse(json);
+    if (cfg.private_key && typeof cfg.private_key === "string") {
+      cfg.private_key = cfg.private_key.replace(/\\n/g, "\n");
+    }
+    return cfg;
+  }
+
+  // fallback: raw JSON
+  const raw = process.env.FIREBASE_CONFIG;
+  if (!raw) throw new Error("Missing FIREBASE_CONFIG (or FIREBASE_CONFIG_B64)");
+  const cfg = JSON.parse(raw);
+  if (cfg.private_key && typeof cfg.private_key === "string") {
+    cfg.private_key = cfg.private_key.replace(/\\n/g, "\n");
+  }
+  return cfg;
+}
+
+function getDb() {
+  if (!admin.apps.length) {
+    const cfg = loadFirebaseConfig();
+    admin.initializeApp({
+      credential: admin.credential.cert(cfg),
+    });
+  }
+  return admin.firestore();
 }
 
 // ---------- Telegram ----------
@@ -100,12 +108,8 @@ async function sendTelegramMessage(chatId, text) {
 
 // ---------- Pages ----------
 app.get("/", (req, res) => res.redirect("/login"));
-app.get("/login", (req, res) =>
-  res.sendFile(path.join(process.cwd(), "public", "login.html"))
-);
-app.get("/dashboard", (req, res) =>
-  res.sendFile(path.join(process.cwd(), "public", "dashboard.html"))
-);
+app.get("/login", (req, res) => res.sendFile(path.join(process.cwd(), "public", "login.html")));
+app.get("/dashboard", (req, res) => res.sendFile(path.join(process.cwd(), "public", "dashboard.html")));
 
 // ---------- Auth ----------
 app.post("/api/auth/login", (req, res) => {
@@ -113,7 +117,6 @@ app.post("/api/auth/login", (req, res) => {
     const { username, password } = req.body || {};
     const u = process.env.ADMIN_USERNAME;
     const p = process.env.ADMIN_PASSWORD;
-
     if (!u || !p) return res.status(500).json({ error: "Missing ADMIN env" });
 
     if (String(username) !== u || String(password) !== p) {
@@ -122,6 +125,7 @@ app.post("/api/auth/login", (req, res) => {
 
     const token = signToken({ role: "admin", username: u });
 
+    // cookie optional
     const isProd = process.env.NODE_ENV === "production";
     res.cookie("token", token, {
       httpOnly: true,
@@ -141,6 +145,35 @@ app.post("/api/auth/logout", (req, res) => {
   const isProd = process.env.NODE_ENV === "production";
   res.cookie("token", "", { httpOnly: true, secure: isProd, sameSite: "lax", maxAge: 0, path: "/" });
   return res.json({ ok: true });
+});
+
+// ---------- DIAG (Protected) ----------
+app.get("/api/diag", authRequired, async (req, res) => {
+  try {
+    const has = (k) => !!process.env[k];
+    const info = {
+      env: {
+        BOT_TOKEN: has("BOT_TOKEN"),
+        JWT_SECRET: has("JWT_SECRET"),
+        ADMIN_USERNAME: has("ADMIN_USERNAME"),
+        ADMIN_PASSWORD: has("ADMIN_PASSWORD"),
+        FIREBASE_CONFIG: has("FIREBASE_CONFIG"),
+        FIREBASE_CONFIG_B64: has("FIREBASE_CONFIG_B64"),
+      },
+    };
+
+    // test firestore read/write
+    const db = getDb();
+    const ref = db.collection("__diag").doc("ping");
+    await ref.set({ at: new Date().toISOString() }, { merge: true });
+    const snap = await ref.get();
+
+    info.firestore = { ok: true, data: snap.data() || null };
+
+    return res.json(info);
+  } catch (e) {
+    return errOut(res, "diag", e);
+  }
 });
 
 // ---------- Numbers (Protected) ----------
@@ -171,18 +204,7 @@ app.get("/api/numbers", authRequired, async (req, res) => {
   }
 });
 
-app.delete("/api/numbers/:phone", authRequired, async (req, res) => {
-  try {
-    const phone = normalizePhone(req.params.phone);
-    const db = getDb();
-    await db.collection("bot_numbers").doc(phone).delete();
-    return res.json({ ok: true });
-  } catch (e) {
-    return errOut(res, "numbers/delete", e);
-  }
-});
-
-// ---------- Manual Send (Protected) ----------
+// ---------- Manual send (Protected) ----------
 app.post("/api/send", authRequired, async (req, res) => {
   try {
     const phone = normalizePhone(req.body?.phone);
@@ -193,9 +215,7 @@ app.post("/api/send", authRequired, async (req, res) => {
     const db = getDb();
     const subDoc = await db.collection("telegram_subscribers").doc(phone).get();
     if (!subDoc.exists) {
-      return res.status(404).json({
-        error: "الرقم لم يراسل البوت بعد (لا يوجد chat_id).",
-      });
+      return res.status(404).json({ error: "الرقم لم يراسل البوت بعد (لا يوجد chat_id)." });
     }
 
     const { chatId } = subDoc.data() || {};
