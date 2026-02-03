@@ -20,25 +20,26 @@
   <div id="err" class="err"></div>
 
   <script>
-    document.getElementById("btn").addEventListener("click", async () => {
+    document.getElementById("btn").onclick = async () => {
       const username = document.getElementById("username").value.trim();
       const password = document.getElementById("password").value.trim();
       document.getElementById("err").textContent = "";
 
       const resp = await fetch("/api/auth/login", {
         method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ username, password }),
-        credentials: "include"
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
       });
 
-      if (resp.ok) {
+      const data = await resp.json().catch(() => ({}));
+
+      if (resp.ok && data.token) {
+        localStorage.setItem("jwt", data.token);
         location.href = "/dashboard";
       } else {
-        const data = await resp.json().catch(() => ({}));
-        document.getElementById("err").textContent = data.error || "فشل الدخول";
+        document.getElementById("err").textContent = data.error || "فشل تسجيل الدخول";
       }
-    });
+    };
   </script>
 </body>
 </html>
