@@ -108,8 +108,12 @@ async function sendTelegramMessage(chatId, text) {
 
 // ---------- Pages ----------
 app.get("/", (req, res) => res.redirect("/login"));
-app.get("/login", (req, res) => res.sendFile(path.join(process.cwd(), "public", "login.html")));
-app.get("/dashboard", (req, res) => res.sendFile(path.join(process.cwd(), "public", "dashboard.html")));
+app.get("/login", (req, res) =>
+  res.sendFile(path.join(process.cwd(), "public", "login.html"))
+);
+app.get("/dashboard", (req, res) =>
+  res.sendFile(path.join(process.cwd(), "public", "dashboard.html"))
+);
 
 // ---------- Auth ----------
 app.post("/api/auth/login", (req, res) => {
@@ -143,7 +147,13 @@ app.post("/api/auth/login", (req, res) => {
 
 app.post("/api/auth/logout", (req, res) => {
   const isProd = process.env.NODE_ENV === "production";
-  res.cookie("token", "", { httpOnly: true, secure: isProd, sameSite: "lax", maxAge: 0, path: "/" });
+  res.cookie("token", "", {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: "lax",
+    maxAge: 0,
+    path: "/",
+  });
   return res.json({ ok: true });
 });
 
@@ -169,7 +179,6 @@ app.get("/api/diag", authRequired, async (req, res) => {
     const snap = await ref.get();
 
     info.firestore = { ok: true, data: snap.data() || null };
-
     return res.json(info);
   } catch (e) {
     return errOut(res, "diag", e);
@@ -197,7 +206,11 @@ app.post("/api/numbers", authRequired, async (req, res) => {
 app.get("/api/numbers", authRequired, async (req, res) => {
   try {
     const db = getDb();
-    const snap = await db.collection("bot_numbers").orderBy("createdAt", "desc").limit(300).get();
+    const snap = await db
+      .collection("bot_numbers")
+      .orderBy("createdAt", "desc")
+      .limit(300)
+      .get();
     return res.json({ items: snap.docs.map((d) => d.data()) });
   } catch (e) {
     return errOut(res, "numbers/get", e);
@@ -205,6 +218,7 @@ app.get("/api/numbers", authRequired, async (req, res) => {
 });
 
 // ---------- Manual send (Protected) ----------
+// ✅ يرسل لكل أفراد الأسرة المسجلين على نفس الرقم
 app.post("/api/send", authRequired, async (req, res) => {
   try {
     const phone = normalizePhone(req.body?.phone);
@@ -213,22 +227,52 @@ app.post("/api/send", authRequired, async (req, res) => {
     if (!message) return res.status(400).json({ error: "Message required" });
 
     const db = getDb();
-    const subDoc = await db.collection("telegram_subscribers").doc(phone).get();
-    if (!subDoc.exists) {
-      return res.status(404).json({ error: "الرقم لم يراسل البوت بعد (لا يوجد chat_id)." });
+
+    // هات كل الشاتات المسجلة للرقم
+    const chatsSnap = await db
+      .collection("telegram_subscribers")
+      .doc(phone)
+      .collection("chats")
+      .get();
+
+    if (chatsSnap.empty) {
+      return res.status(404).json({
+        error:
+          "الرقم لم يراسل البوت بعد (لا يوجد chat_id). لازم أي حد من الأسرة يفتح البوت ويبعت الرقم مرة واحدة.",
+      });
     }
 
-    const { chatId } = subDoc.data() || {};
-    if (!chatId) return res.status(404).json({ error: "Missing chatId" });
+    let delivered = 0;
+    let failed = 0;
+    const failures = [];
 
-    await sendTelegramMessage(chatId, message);
-    return res.json({ ok: true });
+    // إرسال للجميع
+    for (const doc of chatsSnap.docs) {
+      const data = doc.data() || {};
+      const chatId = data.chatId || doc.id;
+
+      try {
+        await sendTelegramMessage(chatId, message);
+        delivered++;
+      } catch (e) {
+        failed++;
+        failures.push({ chatId, error: String(e?.message || e) });
+      }
+    }
+
+    return res.json({
+      ok: true,
+      delivered,
+      failed,
+      failures: failures.slice(0, 5),
+    });
   } catch (e) {
     return errOut(res, "send", e);
   }
 });
 
 // ---------- Telegram webhook (Public) ----------
+// ✅ يسجل أكتر من chatId لنفس الرقم بدل overwrite
 app.post("/api/telegram/webhook", async (req, res) => {
   try {
     const update = req.body || {};
@@ -243,10 +287,29 @@ app.post("/api/telegram/webhook", async (req, res) => {
     const allowed = await db.collection("bot_numbers").doc(phone).get();
 
     if (allowed.exists) {
-      await db.collection("telegram_subscribers").doc(phone).set(
-        { phone, chatId, updatedAt: new Date().toISOString() },
-        { merge: true }
-      );
+      // doc عام للرقم
+      await db
+        .collection("telegram_subscribers")
+        .doc(phone)
+        .set({ phone, updatedAt: new Date().toISOString() }, { merge: true });
+
+      // doc لكل chat داخل subcollection chats
+      await db
+        .collection("telegram_subscribers")
+        .doc(phone)
+        .collection("chats")
+        .doc(String(chatId))
+        .set(
+          {
+            chatId,
+            addedAt: new Date().toISOString(),
+            username: msg.from?.username || null,
+            first_name: msg.from?.first_name || null,
+            last_name: msg.from?.last_name || null,
+          },
+          { merge: true }
+        );
+
       await sendTelegramMessage(chatId, "تم التسجيل ✅");
     } else {
       await sendTelegramMessage(chatId, "هذا الرقم غير مسجل ❌");
