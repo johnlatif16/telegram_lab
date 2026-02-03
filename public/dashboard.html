@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dashboard</title>
+  <style>
+    body{font-family:Arial;margin:30px;max-width:900px}
+    input,button,textarea{padding:10px;font-size:15px}
+    input,textarea{width:100%;margin:6px 0}
+    button{cursor:pointer}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .card{border:1px solid #ddd;border-radius:10px;padding:15px;margin:15px 0}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{border-bottom:1px solid #eee;padding:10px;text-align:right}
+    .danger{background:#ffe9e9}
+    .ok{color:green}
+    .err{color:#b00020}
+  </style>
+</head>
+<body>
+  <div class="row" style="justify-content:space-between">
+    <h2>لوحة التحكم</h2>
+    <button id="logout" class="danger">Logout</button>
+  </div>
+
+  <div class="card">
+    <h3>إضافة رقم</h3>
+    <div class="row">
+      <input id="phone" placeholder="اكتب الرقم (مثال: 01234567890)" />
+      <button id="add">إضافة</button>
+    </div>
+    <div id="addMsg"></div>
+  </div>
+
+  <div class="card">
+    <h3>إرسال رسالة يدويًا</h3>
+    <input id="sendPhone" placeholder="رقم الموبايل" />
+    <textarea id="message" rows="4" placeholder="اكتب الرسالة هنا..."></textarea>
+    <button id="send">إرسال</button>
+    <div id="sendMsg"></div>
+    <small>
+      ملاحظة: لن يمكن الإرسال إلا إذا صاحب الرقم فتح البوت وبعت الرقم مرة واحدة (علشان يتسجل chat_id).
+    </small>
+  </div>
+
+  <div class="card">
+    <h3>الأرقام</h3>
+    <button id="refresh">تحديث القائمة</button>
+    <div id="listMsg"></div>
+    <table>
+      <thead>
+        <tr>
+          <th>الرقم</th>
+          <th>تاريخ الإضافة</th>
+          <th>حذف</th>
+          <th>نسخ للرسائل</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <script>
+    function normalizePhone(s){ return String(s||"").replace(/[^\d]/g,""); }
+
+    async function api(url, options = {}) {
+      const resp = await fetch(url, { credentials: "include", ...options });
+      if (resp.status === 401) {
+        location.href = "/login";
+        return null;
+      }
+      return resp;
+    }
+
+    async function loadNumbers() {
+      const tbody = document.getElementById("tbody");
+      tbody.innerHTML = "";
+      document.getElementById("listMsg").textContent = "";
+
+      const resp = await api("/api/numbers");
+      if (!resp) return;
+
+      const data = await resp.json();
+      const items = data.items || [];
+
+      if (!items.length) {
+        document.getElementById("listMsg").textContent = "لا توجد أرقام.";
+        return;
+      }
+
+      for (const it of items) {
+        const tr = document.createElement("tr");
+
+        const tdPhone = document.createElement("td");
+        tdPhone.textContent = it.phone || "";
+        tr.appendChild(tdPhone);
+
+        const tdDate = document.createElement("td");
+        tdDate.textContent = it.createdAt || "";
+        tr.appendChild(tdDate);
+
+        const tdDel = document.createElement("td");
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "حذف";
+        delBtn.className = "danger";
+        delBtn.onclick = async () => {
+          const phone = normalizePhone(it.phone);
+          const r = await api("/api/numbers/" + phone, { method: "DELETE" });
+          if (r && r.ok) loadNumbers();
+        };
+        tdDel.appendChild(delBtn);
+        tr.appendChild(tdDel);
+
+        const tdCopy = document.createElement("td");
+        const copyBtn = document.createElement("button");
+        copyBtn.textContent = "استخدام";
+        copyBtn.onclick = () => {
+          document.getElementById("sendPhone").value = it.phone || "";
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        };
+        tdCopy.appendChild(copyBtn);
+        tr.appendChild(tdCopy);
+
+        tbody.appendChild(tr);
+      }
+    }
+
+    document.getElementById("add").addEventListener("click", async () => {
+      const phone = normalizePhone(document.getElementById("phone").value);
+      const box = document.getElementById("addMsg");
+      box.textContent = "";
+
+      if (!phone) { box.textContent = "رقم غير صحيح"; box.className = "err"; return; }
+
+      const resp = await api("/api/numbers", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ phone })
+      });
+
+      if (!resp) return;
+
+      if (resp.ok) {
+        box.textContent = "تمت الإضافة ✅";
+        box.className = "ok";
+        document.getElementById("phone").value = "";
+        loadNumbers();
+      } else {
+        const data = await resp.json().catch(()=>({}));
+        box.textContent = data.error || "فشل الإضافة";
+        box.className = "err";
+      }
+    });
+
+    document.getElementById("send").addEventListener("click", async () => {
+      const phone = normalizePhone(document.getElementById("sendPhone").value);
+      const message = document.getElementById("message").value.trim();
+      const box = document.getElementById("sendMsg");
+      box.textContent = "";
+
+      if (!phone) { box.textContent = "رقم غير صحيح"; box.className="err"; return; }
+      if (!message) { box.textContent = "اكتب رسالة"; box.className="err"; return; }
+
+      const resp = await api("/api/send", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ phone, message })
+      });
+
+      if (!resp) return;
+
+      if (resp.ok) {
+        box.textContent = "تم الإرسال ✅";
+        box.className = "ok";
+      } else {
+        const data = await resp.json().catch(()=>({}));
+        box.textContent = data.error || "فشل الإرسال";
+        box.className = "err";
+      }
+    });
+
+    document.getElementById("refresh").addEventListener("click", loadNumbers);
+
+    document.getElementById("logout").addEventListener("click", async () => {
+      await fetch("/api/auth/logout", { method:"POST", credentials:"include" });
+      location.href = "/login";
+    });
+
+    loadNumbers();
+  </script>
+</body>
+</html>

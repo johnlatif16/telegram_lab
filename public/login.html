@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login</title>
+  <style>
+    body{font-family:Arial;margin:40px;max-width:420px}
+    input,button{width:100%;padding:12px;margin:8px 0;font-size:16px}
+    .err{color:#b00020;margin-top:10px}
+  </style>
+</head>
+<body>
+  <h2>تسجيل الدخول</h2>
+
+  <input id="username" placeholder="Username" />
+  <input id="password" type="password" placeholder="Password" />
+  <button id="btn">دخول</button>
+
+  <div id="err" class="err"></div>
+
+  <script>
+    document.getElementById("btn").addEventListener("click", async () => {
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+      document.getElementById("err").textContent = "";
+
+      const resp = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ username, password }),
+        credentials: "include"
+      });
+
+      if (resp.ok) {
+        location.href = "/dashboard";
+      } else {
+        const data = await resp.json().catch(() => ({}));
+        document.getElementById("err").textContent = data.error || "فشل الدخول";
+      }
+    });
+  </script>
+</body>
+</html>
