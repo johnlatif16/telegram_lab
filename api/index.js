@@ -101,14 +101,15 @@ app.post("/api/auth/login", (req, res) => {
 
   const token = signToken({ role: "admin", username });
 
-  const isProd = process.env.NODE_ENV === "production";
-  res.cookie("token", token, {
-    httpOnly: true,
-    secure: isProd, // ✅ مهم جدًا للمحلي
-    sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-    path: "/",
-  });
+const isProd = process.env.NODE_ENV === "production";
+res.cookie("token", token, {
+  httpOnly: true,
+  secure: isProd,
+  sameSite: "lax",
+  path: "/",
+  maxAge: 7 * 24 * 60 * 60 * 1000
+});
+
 
   return res.json({ ok: true });
 });
