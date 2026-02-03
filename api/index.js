@@ -1,23 +1,82 @@
+// api/index.js
 const path = require("path");
 const express = require("express");
 const cookieParser = require("cookie-parser");
-
-const { getDb } = require("../lib/firebase");
-const { sendTelegramMessage } = require("../lib/telegram");
-const { signToken, authRequired } = require("../lib/auth");
+const jwt = require("jsonwebtoken");
+const admin = require("firebase-admin");
 
 const app = express();
 
 app.use(express.json());
-app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-// static files (html)
-app.use("/public", express.static(path.join(process.cwd(), "public")));
+// ✅ static
+app.use(express.static(path.join(process.cwd(), "public")));
 
-// -----------------------------
-// صفحات HTML
-// -----------------------------
+// ---------- Firebase ----------
+function getDb() {
+  if (!admin.apps.length) {
+    const raw = process.env.FIREBASE_CONFIG;
+    if (!raw) throw new Error("Missing FIREBASE_CONFIG");
+
+    const firebaseConfig = JSON.parse(raw);
+    admin.initializeApp({
+      credential: admin.credential.cert(firebaseConfig),
+    });
+  }
+  return admin.firestore();
+}
+
+// ---------- JWT helpers ----------
+function signToken(payload) {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("Missing JWT_SECRET");
+  return jwt.sign(payload, secret, { expiresIn: "7d" });
+}
+
+function verifyToken(token) {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("Missing JWT_SECRET");
+  return jwt.verify(token, secret);
+}
+
+function authRequired(req, res, next) {
+  try {
+    const token = req.cookies?.token;
+    if (!token) return res.status(401).send("Unauthorized");
+    req.user = verifyToken(token);
+    next();
+  } catch {
+    return res.status(401).send("Unauthorized");
+  }
+}
+
+function normalizePhone(input) {
+  return String(input || "").replace(/[^\d]/g, "");
+}
+
+// ---------- Telegram sendMessage ----------
+async function sendTelegramMessage(chatId, text) {
+  const token = process.env.BOT_TOKEN;
+  if (!token) throw new Error("Missing BOT_TOKEN");
+
+  // Bot API sendMessage
+  const url = `https://api.telegram.org/bot${token}/sendMessage`;
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, text }),
+  });
+
+  if (!resp.ok) {
+    const err = await resp.text();
+    throw new Error("Telegram sendMessage failed: " + err);
+  }
+  return resp.json();
+}
+
+// ---------- Pages ----------
 app.get("/", (req, res) => res.redirect("/login"));
 
 app.get("/login", (req, res) => {
@@ -28,15 +87,12 @@ app.get("/dashboard", authRequired, (req, res) => {
   res.sendFile(path.join(process.cwd(), "public", "dashboard.html"));
 });
 
-// -----------------------------
-// Auth endpoints
-// -----------------------------
+// ---------- Auth API ----------
 app.post("/api/auth/login", (req, res) => {
   const { username, password } = req.body;
 
   const u = process.env.ADMIN_USERNAME;
   const p = process.env.ADMIN_PASSWORD;
-
   if (!u || !p) return res.status(500).json({ error: "Missing admin env" });
 
   if (username !== u || password !== p) {
@@ -45,9 +101,10 @@ app.post("/api/auth/login", (req, res) => {
 
   const token = signToken({ role: "admin", username });
 
+  const isProd = process.env.NODE_ENV === "production";
   res.cookie("token", token, {
     httpOnly: true,
-    secure: true, // على Vercel HTTPS
+    secure: isProd, // ✅ مهم جدًا للمحلي
     sameSite: "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: "/",
@@ -57,26 +114,16 @@ app.post("/api/auth/login", (req, res) => {
 });
 
 app.post("/api/auth/logout", (req, res) => {
-  res.cookie("token", "", { httpOnly: true, secure: true, sameSite: "lax", maxAge: 0, path: "/" });
+  const isProd = process.env.NODE_ENV === "production";
+  res.cookie("token", "", { httpOnly: true, secure: isProd, sameSite: "lax", maxAge: 0, path: "/" });
   return res.json({ ok: true });
 });
 
-// -----------------------------
-// Helpers
-// -----------------------------
-function normalizePhone(input) {
-  return String(input || "").replace(/[^\d]/g, "");
-}
-
-// -----------------------------
-// Numbers CRUD (Protected)
-// Collection: bot_numbers/{phone}
-// -----------------------------
+// ---------- Numbers CRUD (JWT protected) ----------
 app.get("/api/numbers", authRequired, async (req, res) => {
   const db = getDb();
-  const snap = await db.collection("bot_numbers").orderBy("createdAt", "desc").limit(200).get();
-  const items = snap.docs.map((d) => d.data());
-  res.json({ items });
+  const snap = await db.collection("bot_numbers").orderBy("createdAt", "desc").limit(300).get();
+  res.json({ items: snap.docs.map((d) => d.data()) });
 });
 
 app.post("/api/numbers", authRequired, async (req, res) => {
@@ -99,66 +146,53 @@ app.delete("/api/numbers/:phone", authRequired, async (req, res) => {
   res.json({ ok: true });
 });
 
-// -----------------------------
-// Send manual message (Protected)
-// Uses telegram_subscribers/{phone} -> { chatId }
-// -----------------------------
+// ---------- Manual send (JWT protected) ----------
 app.post("/api/send", authRequired, async (req, res) => {
   const phone = normalizePhone(req.body.phone);
   const message = String(req.body.message || "").trim();
-
   if (!phone) return res.status(400).json({ error: "Invalid phone" });
   if (!message) return res.status(400).json({ error: "Message required" });
 
   const db = getDb();
-  const sub = await db.collection("telegram_subscribers").doc(phone).get();
+  const subDoc = await db.collection("telegram_subscribers").doc(phone).get();
 
-  if (!sub.exists) {
+  if (!subDoc.exists) {
     return res.status(404).json({
-      error: "هذا الرقم لم يراسل البوت بعد (لا يوجد chat_id). اطلب منه يفتح البوت ويبعت الرقم مرة واحدة.",
+      error: "الرقم لم يراسل البوت بعد، لا يوجد chat_id. لازم صاحب الرقم يفتح البوت ويبعت الرقم مرة واحدة.",
     });
   }
 
-  const { chatId } = sub.data();
+  const { chatId } = subDoc.data();
   if (!chatId) return res.status(404).json({ error: "Missing chatId" });
 
   await sendTelegramMessage(chatId, message);
   res.json({ ok: true });
 });
 
-// -----------------------------
-// Telegram webhook endpoint
-// POST /api/telegram/webhook
-// -----------------------------
+// ---------- Telegram webhook (public) ----------
 app.post("/api/telegram/webhook", async (req, res) => {
   try {
     const update = req.body || {};
     const msg = update.message;
-
     if (!msg || !msg.text) return res.status(200).json({ ok: true });
 
     const chatId = msg.chat?.id;
     const text = msg.text;
 
     const phone = normalizePhone(text);
-    if (!phone || phone.length < 7) {
-      // تجاهل أي شيء غير رقم
-      return res.status(200).json({ ok: true });
-    }
+    if (!phone || phone.length < 7) return res.status(200).json({ ok: true });
 
     const db = getDb();
 
-    // هل الرقم مسجل؟
+    // check if number exists
     const allowed = await db.collection("bot_numbers").doc(phone).get();
 
     if (allowed.exists) {
-      // خزّن chat_id لهذا الرقم علشان تبعتله يدويًا لاحقًا
+      // save chatId mapping for manual sends later
       await db.collection("telegram_subscribers").doc(phone).set(
         { phone, chatId, updatedAt: new Date().toISOString() },
         { merge: true }
       );
-
-      // رد على المستخدم
       await sendTelegramMessage(chatId, "تم التسجيل ✅");
     } else {
       await sendTelegramMessage(chatId, "هذا الرقم غير مسجل ❌");
@@ -171,5 +205,5 @@ app.post("/api/telegram/webhook", async (req, res) => {
   }
 });
 
-// Vercel handler
-module.exports = app;
+// ✅ مهم: في Vercel لازم نصدّر handler
+module.exports = (req, res) => app(req, res);
