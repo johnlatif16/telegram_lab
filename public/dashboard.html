@@ -153,7 +153,7 @@
         document.getElementById("phone").value = "";
         loadNumbers();
       } else {
-        msg.textContent = data.error || ("HTTP " + resp.status);
+        msg.textContent = (data.detail ? (data.error + " — " + data.detail) : (data.error || ("HTTP " + resp.status)));
         msg.className = "err";
       }
     };
@@ -182,7 +182,7 @@
         msg.textContent = "تم الإرسال ✅";
         msg.className = "ok";
       } else {
-        msg.textContent = data.error || ("HTTP " + resp.status);
+        msg.textContent = (data.detail ? (data.error + " — " + data.detail) : (data.error || ("HTTP " + resp.status)));
         msg.className = "err";
       }
     };
