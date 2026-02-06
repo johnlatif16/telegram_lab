@@ -4,150 +4,192 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Login</title>
-
   <style>
-    :root{
-      --bg: #0b1220;
-      --panel: rgba(255,255,255,.06);
-      --border: rgba(255,255,255,.12);
-      --text: rgba(255,255,255,.92);
-      --muted: rgba(255,255,255,.62);
-      --brand: #5aa7ff;
-      --brand2: #7c5cff;
-      --danger: #ff5d5d;
-      --shadow: 0 18px 55px rgba(0,0,0,.50);
-      --radius: 20px;
+    :root {
+      --primary: #7c3aed;
+      --primary-light: #8b5cf6;
+      --danger: #ef4444;
+      --dark-bg: #0f172a;
+      --dark-card: #1e293b;
+      --dark-border: #334155;
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --shadow: rgba(0, 0, 0, 0.3);
     }
-
-    *{ box-sizing:border-box; }
-    html,body{ height:100%; }
-    body{
-      margin:0;
-      font-family: Arial, system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
-      display:grid;
-      place-items:center;
-      padding:24px;
-      background:
-        radial-gradient(900px 500px at 15% 0%, rgba(90,167,255,.22), transparent 55%),
-        radial-gradient(900px 500px at 85% -10%, rgba(124,92,255,.22), transparent 60%),
-        linear-gradient(180deg, #08101f 0%, #070b14 100%);
-      color: var(--text);
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
-
-    .box{
-      width: min(440px, 100%);
-      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.04));
-      border:1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding:18px;
-      backdrop-filter: blur(8px);
+    
+    body {
+      font-family: 'Segoe UI', 'Noto Sans Arabic', Tahoma, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: var(--dark-bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(124, 58, 237, 0.1) 0%, transparent 20%),
+        radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 20%);
     }
-
-    .head{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      margin-bottom:14px;
+    
+    .login-container {
+      width: 100%;
+      max-width: 450px;
+      padding: 20px;
     }
-
-    h2{ margin:0; font-size:20px; letter-spacing:.2px; }
-
-    .tag{
-      font-size:12px;
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.03);
-      color: var(--muted);
+    
+    .login-card {
+      background-color: var(--dark-card);
+      border: 1px solid var(--dark-border);
+      border-radius: 20px;
+      padding: 40px 35px;
+      box-shadow: 0 15px 35px var(--shadow);
+      text-align: center;
     }
-
-    label{
-      display:block;
-      margin:10px 0 6px;
-      font-size:12px;
-      color: var(--muted);
+    
+    h2 {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, var(--primary), #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
-
-    input{
-      width:100%;
-      padding:12px 12px;
-      font-size:15px;
-      color: var(--text);
-      background: rgba(0,0,0,.25);
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 14px;
-      outline:none;
-      transition:.15s ease;
+    
+    .subtitle {
+      color: var(--text-secondary);
+      margin-bottom: 30px;
+      font-size: 1rem;
     }
-    input::placeholder{ color: rgba(255,255,255,.45); }
-    input:focus{
-      border-color: rgba(90,167,255,.55);
-      box-shadow: 0 0 0 3px rgba(90,167,255,.18);
+    
+    .input-group {
+      margin-bottom: 25px;
+      text-align: right;
     }
-
-    button{
-      width:100%;
-      margin-top:14px;
-      padding:12px 14px;
-      border:none;
-      border-radius:14px;
-      cursor:pointer;
-      font-size:15px;
-      color: rgba(255,255,255,.92);
-      background: linear-gradient(135deg, rgba(90,167,255,.92), rgba(124,92,255,.92));
-      box-shadow: 0 12px 30px rgba(90,167,255,.16);
-      transition: transform .12s ease, filter .12s ease, opacity .12s ease;
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text-secondary);
+      font-weight: 500;
     }
-    button:hover{ transform: translateY(-1px); filter: brightness(1.05); }
-    button:active{ transform: translateY(0); opacity:.92; }
-
-    .err{
-      margin-top:12px;
-      padding:10px 12px;
-      border-radius:14px;
-      border:1px solid rgba(255,93,93,.35);
-      background: rgba(255,93,93,.12);
-      color: rgba(255,255,255,.92);
-      display:none;
+    
+    input {
+      width: 100%;
+      padding: 16px 20px;
+      font-size: 16px;
+      background-color: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--dark-border);
+      border-radius: 12px;
+      color: var(--text-primary);
+      transition: all 0.3s ease;
+      font-family: inherit;
     }
-    .muted{
-      margin-top:12px;
-      font-size:12px;
-      color: var(--muted);
-      line-height:1.5;
+    
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+    }
+    
+    input::placeholder {
+      color: var(--text-muted);
+    }
+    
+    button {
+      width: 100%;
+      padding: 17px;
+      font-size: 17px;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      color: white;
+      margin-top: 10px;
+      font-family: inherit;
+    }
+    
+    button:hover {
+      background: linear-gradient(135deg, var(--primary-light), var(--primary));
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+    }
+    
+    .err {
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: 12px;
+      background-color: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border-right: 4px solid #ef4444;
+      text-align: right;
+      font-weight: 500;
+    }
+    
+    .footer {
+      margin-top: 30px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    
+    @media (max-width: 500px) {
+      .login-card {
+        padding: 30px 25px;
+      }
+      
+      h2 {
+        font-size: 1.8rem;
+      }
     }
   </style>
 </head>
-
 <body>
-  <div class="box">
-    <div class="head">
+  <div class="login-container">
+    <div class="login-card">
       <h2>تسجيل الدخول</h2>
-      <span class="tag">Dark ثابت</span>
+      <p class="subtitle">أدخل بيانات الدخول للوصول إلى لوحة التحكم</p>
+      
+      <div class="input-group">
+        <label for="username">اسم المستخدم</label>
+        <input id="username" placeholder="أدخل اسم المستخدم" />
+      </div>
+      
+      <div class="input-group">
+        <label for="password">كلمة المرور</label>
+        <input id="password" type="password" placeholder="أدخل كلمة المرور" />
+      </div>
+      
+      <button id="btn">دخول إلى لوحة التحكم</button>
+      
+      <div id="err" class="err"></div>
+      
+      <div class="footer">
+        نظام إدارة الأرقام والرسائل © 2023
+      </div>
     </div>
-
-    <label for="username">Username</label>
-    <input id="username" placeholder="Username" />
-
-    <label for="password">Password</label>
-    <input id="password" type="password" placeholder="Password" />
-
-    <button id="btn">دخول</button>
-
-    <div id="err" class="err"></div>
-
-    <div class="muted">لو حصل خطأ، هتظهر الرسالة هنا بشكل واضح.</div>
   </div>
 
   <script>
     document.getElementById("btn").onclick = async () => {
       const username = document.getElementById("username").value.trim();
       const password = document.getElementById("password").value.trim();
-      const errEl = document.getElementById("err");
-      errEl.style.display = "none";
-      errEl.textContent = "";
+      const err = document.getElementById("err");
+      err.textContent = "";
+      
+      // التحقق من الحقول الفارغة
+      if (!username || !password) {
+        err.textContent = "الرجاء إدخال اسم المستخدم وكلمة المرور";
+        return;
+      }
 
       const resp = await fetch("/api/auth/login", {
         method: "POST",
@@ -161,10 +203,16 @@
         localStorage.setItem("jwt", data.token);
         location.href = "/dashboard";
       } else {
-        errEl.textContent = data.error || "فشل تسجيل الدخول";
-        errEl.style.display = "block";
+        err.textContent = data.error || "فشل تسجيل الدخول. الرجاء المحاولة مرة أخرى";
       }
     };
+    
+    // السماح بالدخول باستخدام زر Enter
+    document.getElementById("password").addEventListener("keyup", function(event) {
+      if (event.key === "Enter") {
+        document.getElementById("btn").click();
+      }
+    });
   </script>
 </body>
 </html>
