@@ -4,278 +4,349 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Dashboard</title>
-
   <style>
-    :root{
-      --bg: #0b1220;
-      --panel: rgba(255,255,255,.06);
-      --panel2: rgba(255,255,255,.04);
-      --border: rgba(255,255,255,.10);
-      --text: rgba(255,255,255,.92);
-      --muted: rgba(255,255,255,.66);
-
-      --brand: #5aa7ff;
-      --brand2: #7c5cff;
-      --ok: #39d98a;
-      --danger: #ff5d5d;
-      --warn: #ffcc66;
-
-      --shadow: 0 16px 50px rgba(0,0,0,.45);
-      --radius: 18px;
+    /* تخصيص الخطوط والألوان */
+    :root {
+      --primary: #7c3aed;
+      --primary-light: #8b5cf6;
+      --secondary: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --dark-bg: #0f172a;
+      --dark-card: #1e293b;
+      --dark-border: #334155;
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --shadow: rgba(0, 0, 0, 0.3);
     }
-
-    *{ box-sizing:border-box; }
-    html,body{ height:100%; }
-    body{
-      margin:0;
-      font-family: Arial, system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
-      background:
-        radial-gradient(900px 500px at 85% -10%, rgba(124,92,255,.25), transparent 60%),
-        radial-gradient(900px 500px at 10% 0%, rgba(90,167,255,.22), transparent 55%),
-        linear-gradient(180deg, #08101f 0%, #070b14 100%);
-      color:var(--text);
-      padding:28px;
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
-
-    .wrap{ max-width: 980px; margin:0 auto; }
-
-    .topbar{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:12px;
-      flex-wrap:wrap;
-      margin-bottom:18px;
+    
+    body {
+      font-family: 'Segoe UI', 'Noto Sans Arabic', Tahoma, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: var(--dark-bg);
+      color: var(--text-primary);
+      line-height: 1.6;
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(124, 58, 237, 0.1) 0%, transparent 20%),
+        radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 20%);
     }
-
-    h2{
-      margin:0;
-      font-size:22px;
-      letter-spacing:.2px;
-      display:flex;
-      align-items:center;
-      gap:10px;
+    
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px;
     }
-
-    .badge{
-      font-size:12px;
-      padding:6px 10px;
-      border:1px solid var(--border);
-      border-radius:999px;
-      color:var(--muted);
-      background:rgba(255,255,255,.03);
+    
+    /* تحسين العناوين */
+    h2 {
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      position: relative;
+      display: inline-block;
     }
-
-    .card{
-      background: linear-gradient(180deg, var(--panel) 0%, var(--panel2) 100%);
-      border:1px solid var(--border);
-      border-radius: var(--radius);
-      padding:18px;
-      margin:14px 0;
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(8px);
+    
+    h2::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      right: 0;
+      width: 60%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), transparent);
+      border-radius: 3px;
     }
-
-    .card h3{
-      margin:0 0 12px;
-      font-size:16px;
-      color: rgba(255,255,255,.92);
+    
+    h3 {
+      font-size: 1.5rem;
+      margin-bottom: 1.2rem;
+      color: var(--text-primary);
+      border-right: 4px solid var(--primary);
+      padding-right: 12px;
     }
-
-    .grid{
-      display:grid;
-      grid-template-columns: 1fr auto;
-      gap:10px;
-      align-items:start;
+    
+    /* تحسين الترويسة */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--dark-border);
     }
-
-    @media (max-width: 720px){
-      .grid{ grid-template-columns: 1fr; }
-    }
-
-    label{ display:block; font-size:12px; color:var(--muted); margin:4px 0 6px; }
-
-    input, textarea{
-      width:100%;
-      padding:12px 12px;
-      font-size:15px;
-      color: var(--text);
-      background: rgba(0,0,0,.25);
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 14px;
-      outline: none;
-      transition: .15s ease;
-    }
-    input::placeholder, textarea::placeholder{ color: rgba(255,255,255,.45); }
-    input:focus, textarea:focus{
-      border-color: rgba(90,167,255,.55);
-      box-shadow: 0 0 0 3px rgba(90,167,255,.18);
-    }
-
-    .actions{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      justify-content:flex-end;
-      flex-wrap:wrap;
-    }
-
-    button{
-      cursor:pointer;
-      border:none;
-      border-radius: 14px;
-      padding:12px 14px;
-      font-size:14px;
-      color: rgba(255,255,255,.92);
-      background: linear-gradient(135deg, rgba(90,167,255,.92), rgba(124,92,255,.92));
-      box-shadow: 0 10px 26px rgba(90,167,255,.16);
-      transition: transform .12s ease, filter .12s ease, opacity .12s ease;
-      white-space:nowrap;
-    }
-    button:hover{ transform: translateY(-1px); filter: brightness(1.05); }
-    button:active{ transform: translateY(0); opacity:.92; }
-
-    .btn-ghost{
-      background: rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.12);
-      box-shadow:none;
-    }
-
-    .btn-danger{
-      background: rgba(255,93,93,.14);
-      border:1px solid rgba(255,93,93,.35);
-      box-shadow:none;
-    }
-    .btn-danger:hover{ filter: brightness(1.08); }
-
-    .hint{
-      margin-top:10px;
-      color: var(--muted);
-      font-size: 12px;
-      line-height:1.5;
-    }
-
-    .msg{
-      margin-top:10px;
-      padding:10px 12px;
-      border-radius: 14px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.04);
-      color: var(--muted);
-    }
-    .msg.ok{
-      border-color: rgba(57,217,138,.35);
-      background: rgba(57,217,138,.10);
-      color: rgba(255,255,255,.92);
-    }
-    .msg.err{
-      border-color: rgba(255,93,93,.35);
-      background: rgba(255,93,93,.12);
-      color: rgba(255,255,255,.92);
-    }
-
-    .tableWrap{
-      overflow:auto;
+    
+    /* تحسين الكروت */
+    .card {
+      background-color: var(--dark-card);
+      border: 1px solid var(--dark-border);
       border-radius: 16px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.18);
-      margin-top:12px;
+      padding: 24px;
+      margin: 24px 0;
+      box-shadow: 0 10px 25px var(--shadow);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
-
-    table{ width:100%; border-collapse:collapse; min-width: 620px; }
-    th, td{
-      padding:12px 12px;
-      text-align:right;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      vertical-align:middle;
-      font-size:14px;
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
     }
-    th{
-      position:sticky;
-      top:0;
-      background: rgba(10,16,30,.92);
-      backdrop-filter: blur(8px);
-      color: rgba(255,255,255,.78);
-      font-weight:600;
+    
+    /* تحسين حقول الإدخال */
+    input, textarea {
+      width: 100%;
+      padding: 14px 16px;
+      margin: 10px 0;
+      font-size: 16px;
+      background-color: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--dark-border);
+      border-radius: 10px;
+      color: var(--text-primary);
+      transition: all 0.3s ease;
+      font-family: inherit;
     }
-    tbody tr:hover{ background: rgba(255,255,255,.04); }
-
-    .pill{
-      display:inline-flex;
-      gap:8px;
-      align-items:center;
-      padding:8px 10px;
-      border-radius: 999px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.04);
-      color: rgba(255,255,255,.85);
-      font-size:12px;
+    
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+    }
+    
+    input::placeholder, textarea::placeholder {
+      color: var(--text-muted);
+    }
+    
+    /* تحسين الأزرار */
+    button {
+      padding: 14px 28px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    #add, #send {
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      color: white;
+      margin-top: 10px;
+    }
+    
+    #add:hover, #send:hover {
+      background: linear-gradient(135deg, var(--primary-light), var(--primary));
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+    }
+    
+    #refresh {
+      background-color: rgba(16, 185, 129, 0.15);
+      color: var(--secondary);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    
+    #refresh:hover {
+      background-color: rgba(16, 185, 129, 0.25);
+      transform: translateY(-2px);
+    }
+    
+    .danger {
+      background: linear-gradient(135deg, var(--danger), #f87171);
+      color: white;
+    }
+    
+    .danger:hover {
+      background: linear-gradient(135deg, #f87171, var(--danger));
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+    }
+    
+    /* تحسين الجدول */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    th {
+      background-color: rgba(30, 41, 59, 0.8);
+      padding: 18px 15px;
+      text-align: right;
+      font-weight: 600;
+      color: var(--text-primary);
+      border-bottom: 2px solid var(--dark-border);
+    }
+    
+    td {
+      padding: 16px 15px;
+      text-align: right;
+      border-bottom: 1px solid var(--dark-border);
+      color: var(--text-secondary);
+    }
+    
+    tr {
+      transition: background-color 0.2s ease;
+    }
+    
+    tr:hover {
+      background-color: rgba(30, 41, 59, 0.6);
+    }
+    
+    /* تحسين الرسائل */
+    #addMsg, #sendMsg, #listMsg {
+      margin-top: 15px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-weight: 500;
+    }
+    
+    .ok {
+      background-color: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      border-right: 4px solid #10b981;
+    }
+    
+    .err {
+      background-color: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border-right: 4px solid #ef4444;
+    }
+    
+    /* تحسين النصوص الصغيرة */
+    small {
+      display: block;
+      margin-top: 15px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      padding: 10px 14px;
+      background-color: rgba(30, 41, 59, 0.6);
+      border-radius: 8px;
+      border-right: 3px solid var(--warning);
+    }
+    
+    /* تحسين الأزرار داخل الجدول */
+    table button {
+      padding: 10px 18px;
+      font-size: 14px;
+      margin: 0;
+    }
+    
+    /* تحسين التمرير */
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: var(--dark-card);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: var(--primary);
+      border-radius: 5px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--primary-light);
+    }
+    
+    /* تحسين للشاشات الصغيرة */
+    @media (max-width: 768px) {
+      .container {
+        padding: 15px;
+      }
+      
+      h2 {
+        font-size: 1.7rem;
+      }
+      
+      h3 {
+        font-size: 1.3rem;
+      }
+      
+      .card {
+        padding: 18px;
+      }
+      
+      table {
+        display: block;
+        overflow-x: auto;
+      }
+      
+      button {
+        padding: 12px 20px;
+        font-size: 15px;
+      }
     }
   </style>
 </head>
-
 <body>
-  <div class="wrap">
-    <div class="topbar">
-      <h2>لوحة التحكم <span class="badge">Dark ثابت</span></h2>
-      <button id="logout" class="btn-danger">Logout</button>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h2>لوحة التحكم</h2>
+        <p style="color: var(--text-secondary); margin-top: 5px;">إدارة الأرقام والرسائل</p>
+      </div>
+      <button id="logout" class="danger">
+        <span>تسجيل الخروج</span>
+      </button>
     </div>
 
     <div class="card">
-      <h3>إضافة رقم</h3>
-      <div class="grid">
-        <div>
-          <label for="phone">الرقم</label>
-          <input id="phone" placeholder="اكتب الرقم (مثال: 01234567890)" />
-          <div id="addMsg"></div>
-        </div>
-        <div class="actions">
-          <button id="add">إضافة</button>
-        </div>
-      </div>
+      <h3>إضافة رقم جديد</h3>
+      <input id="phone" placeholder="اكتب الرقم (مثال: 01234567890)" />
+      <button id="add">إضافة الرقم</button>
+      <div id="addMsg"></div>
     </div>
 
     <div class="card">
       <h3>إرسال رسالة يدويًا</h3>
-      <div class="grid">
-        <div>
-          <label for="sendPhone">رقم الموبايل</label>
-          <input id="sendPhone" placeholder="رقم الموبايل" />
-          <label for="message">الرسالة</label>
-          <textarea id="message" rows="4" placeholder="اكتب الرسالة هنا..."></textarea>
-          <div id="sendMsg"></div>
-
-          <div class="hint">
-            ملاحظة: لازم صاحب الرقم يفتح البوت ويبعت الرقم مرة واحدة عشان يتسجل chat_id.
-          </div>
-        </div>
-        <div class="actions">
-          <button id="send">إرسال</button>
-        </div>
-      </div>
+      <input id="sendPhone" placeholder="رقم الموبايل" />
+      <textarea id="message" rows="4" placeholder="اكتب الرسالة هنا..."></textarea>
+      <button id="send">إرسال الرسالة</button>
+      <div id="sendMsg"></div>
+      <small>
+        ملاحظة: يجب على صاحب الرقم فتح البوت وإرسال الرقم مرة واحدة ليتم تسجيل chat_id.
+      </small>
     </div>
 
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-        <h3 style="margin:0">الأرقام</h3>
-        <button id="refresh" class="btn-ghost">تحديث القائمة</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+        <h3 style="margin-bottom: 0;">قائمة الأرقام المسجلة</h3>
+        <button id="refresh">تحديث القائمة</button>
       </div>
-
       <div id="listMsg"></div>
-
-      <div class="tableWrap">
-        <table>
-          <thead>
-            <tr>
-              <th>الرقم</th>
-              <th>تاريخ الإضافة</th>
-              <th>حذف</th>
-              <th>استخدام</th>
-            </tr>
-          </thead>
-          <tbody id="tbody"></tbody>
-        </table>
-      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>الرقم</th>
+            <th>تاريخ الإضافة</th>
+            <th>الإجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
     </div>
   </div>
 
@@ -297,15 +368,12 @@
       return resp;
     }
 
-    function setMsg(el, text, kind){
-      el.textContent = text || "";
-      el.className = text ? ("msg " + (kind || "")) : "";
-    }
-
     async function loadNumbers() {
       const tbody = document.getElementById("tbody");
       tbody.innerHTML = "";
-      setMsg(document.getElementById("listMsg"), "", "");
+      const listMsg = document.getElementById("listMsg");
+      listMsg.textContent = "";
+      listMsg.className = "";
 
       const resp = await api("/api/numbers");
       if (!resp) return;
@@ -314,44 +382,62 @@
       const items = data.items || [];
 
       if (!items.length) {
-        setMsg(document.getElementById("listMsg"), "لا توجد أرقام.", "");
+        listMsg.textContent = "لا توجد أرقام مسجلة حالياً.";
+        listMsg.className = "err";
         return;
       }
 
       for (const it of items) {
         const tr = document.createElement("tr");
 
+        // عمود الرقم
         const tdPhone = document.createElement("td");
-        tdPhone.innerHTML = `<span class="pill">${it.phone || ""}</span>`;
+        const phoneDiv = document.createElement("div");
+        phoneDiv.textContent = it.phone || "";
+        phoneDiv.style.fontWeight = "500";
+        phoneDiv.style.color = "var(--text-primary)";
+        tdPhone.appendChild(phoneDiv);
         tr.appendChild(tdPhone);
 
+        // عمود التاريخ
         const tdDate = document.createElement("td");
         tdDate.textContent = it.createdAt || "";
-        tdDate.style.color = "rgba(255,255,255,.70)";
+        tdDate.style.color = "var(--text-secondary)";
         tr.appendChild(tdDate);
 
-        const tdDel = document.createElement("td");
+        // عمود الإجراءات
+        const tdActions = document.createElement("td");
+        tdActions.style.display = "flex";
+        tdActions.style.gap = "10px";
+        tdActions.style.flexWrap = "wrap";
+        
+        // زر الاستخدام
+        const useBtn = document.createElement("button");
+        useBtn.textContent = "استخدام";
+        useBtn.style.backgroundColor = "rgba(124, 58, 237, 0.15)";
+        useBtn.style.color = "var(--primary-light)";
+        useBtn.style.border = "1px solid rgba(124, 58, 237, 0.3)";
+        useBtn.onclick = () => {
+          document.getElementById("sendPhone").value = it.phone || "";
+          document.getElementById("message").focus();
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        };
+        
+        // زر الحذف
         const delBtn = document.createElement("button");
         delBtn.textContent = "حذف";
-        delBtn.className = "btn-danger";
+        delBtn.className = "danger";
         delBtn.onclick = async () => {
+          if (!confirm(`هل أنت متأكد من حذف الرقم ${it.phone}؟`)) return;
+          
           const phone = normalizePhone(it.phone);
           const r = await api("/api/numbers/" + phone, { method: "DELETE" });
           if (r && r.ok) loadNumbers();
         };
-        tdDel.appendChild(delBtn);
-        tr.appendChild(tdDel);
-
-        const tdUse = document.createElement("td");
-        const useBtn = document.createElement("button");
-        useBtn.textContent = "استخدام";
-        useBtn.className = "btn-ghost";
-        useBtn.onclick = () => {
-          document.getElementById("sendPhone").value = it.phone || "";
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        };
-        tdUse.appendChild(useBtn);
-        tr.appendChild(tdUse);
+        
+        tdActions.appendChild(useBtn);
+        tdActions.appendChild(delBtn);
+        tr.appendChild(tdActions);
 
         tbody.appendChild(tr);
       }
@@ -360,9 +446,14 @@
     document.getElementById("add").onclick = async () => {
       const phone = normalizePhone(document.getElementById("phone").value);
       const msg = document.getElementById("addMsg");
-      setMsg(msg, "", "");
+      msg.textContent = "";
+      msg.className = "";
 
-      if (!phone) { setMsg(msg, "رقم غير صحيح", "err"); return; }
+      if (!phone || phone.length < 10) { 
+        msg.textContent = "الرجاء إدخال رقم صحيح (10 أرقام على الأقل)";
+        msg.className="err"; 
+        return; 
+      }
 
       const resp = await api("/api/numbers", {
         method: "POST",
@@ -375,12 +466,13 @@
       const data = await resp.json().catch(()=>({}));
 
       if (resp.ok) {
-        setMsg(msg, "تمت الإضافة ✅", "ok");
+        msg.textContent = "تمت إضافة الرقم بنجاح ✅";
+        msg.className = "ok";
         document.getElementById("phone").value = "";
         loadNumbers();
       } else {
-        const t = (data.detail ? (data.error + " — " + data.detail) : (data.error || ("HTTP " + resp.status)));
-        setMsg(msg, t, "err");
+        msg.textContent = (data.detail ? (data.error + " — " + data.detail) : (data.error || ("خطأ " + resp.status)));
+        msg.className = "err";
       }
     };
 
@@ -388,10 +480,20 @@
       const phone = normalizePhone(document.getElementById("sendPhone").value);
       const message = document.getElementById("message").value.trim();
       const msg = document.getElementById("sendMsg");
-      setMsg(msg, "", "");
+      msg.textContent = "";
+      msg.className = "";
 
-      if (!phone) { setMsg(msg,"رقم غير صحيح","err"); return; }
-      if (!message) { setMsg(msg,"اكتب رسالة","err"); return; }
+      if (!phone || phone.length < 10) { 
+        msg.textContent="الرجاء إدخال رقم صحيح"; 
+        msg.className="err"; 
+        return; 
+      }
+      
+      if (!message) { 
+        msg.textContent="الرجاء كتابة نص الرسالة"; 
+        msg.className="err"; 
+        return; 
+      }
 
       const resp = await api("/api/send", {
         method: "POST",
@@ -404,26 +506,39 @@
       const data = await resp.json().catch(()=>({}));
 
       if (resp.ok) {
-        setMsg(msg, "تم الإرسال ✅", "ok");
+        msg.textContent = "تم إرسال الرسالة بنجاح ✅";
+        msg.className = "ok";
+        document.getElementById("message").value = "";
       } else {
-        const t = (data.detail ? (data.error + " — " + data.detail) : (data.error || ("HTTP " + resp.status)));
-        setMsg(msg, t, "err");
+        msg.textContent = (data.detail ? (data.error + " — " + data.detail) : (data.error || ("خطأ " + resp.status)));
+        msg.className = "err";
       }
     };
 
     document.getElementById("refresh").onclick = loadNumbers;
 
     document.getElementById("logout").onclick = async () => {
+      if (!confirm("هل تريد تسجيل الخروج؟")) return;
+      
       await fetch("/api/auth/logout", { method: "POST" }).catch(()=>{});
       localStorage.removeItem("jwt");
       location.href = "/login";
     };
 
+    // التحقق من وجود التوكن
     if (!localStorage.getItem("jwt")) {
       location.href = "/login";
     } else {
       loadNumbers();
     }
+    
+    // إضافة تأثيرات بصرية إضافية
+    document.addEventListener('DOMContentLoaded', function() {
+      const cards = document.querySelectorAll('.card');
+      cards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+      });
+    });
   </script>
 </body>
 </html>
